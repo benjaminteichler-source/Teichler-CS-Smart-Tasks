@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}My Tasks — Smart Task Manager{% endblock %}
+
+{% block content %}
+
+<!-- ── Stats Bar ─────────────────────────────────────────────────── -->
+<section class="stats-bar">
+  <div class="stat-card">
+    <span class="stat-number">{{ stats.total }}</span>
+    <span class="stat-label">Total</span>
+  </div>
+  <div class="stat-card stat-card--green">
+    <span class="stat-number">{{ stats.completed }}</span>
+    <span class="stat-label">Completed</span>
+  </div>
+  <div class="stat-card stat-card--blue">
+    <span class="stat-number">{{ stats.pending }}</span>
+    <span class="stat-label">Pending</span>
+  </div>
+  <div class="stat-card stat-card--red">
+    <span class="stat-number">{{ stats.overdue }}</span>
+    <span class="stat-label">Overdue</span>
+  </div>
+</section>
+
+<!-- ── Two-column layout ──────────────────────────────────────────── -->
+<div class="page-grid">
+
+  <!-- LEFT: Add Task Form ───────────────────────────────────────── -->
+  <aside class="card form-card">
+    <h2>Add New Task</h2>
+    <form action="{{ url_for('tasks.create') }}" method="POST" id="new-task-form" novalidate>
+
+      <div class="form-group">
+        <label for="title">Title <span class="required">*</span></label>
+        <input type="text" id="title" name="title" placeholder="What needs to be done?" required maxlength="120" />
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="3" placeholder="Optional details…" maxlength="500"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            {% for pri in priorities %}
+              <option value="{{ pri }}">{{ pri | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="due_date">Due Date</label>
+        <input type="date" id="due_date" name="due_date" />
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full">+ Add Task</button>
+    </form>
+  </aside>
+
+  <!-- RIGHT: Filter + Task List ────────────────────────────────── -->
+  <section class="task-section">
+
+    <!-- Filter bar -->
+    <form method="GET" action="{{ url_for('tasks.index') }}" class="filter-bar card">
+      <input
+        type="text"
+        name="keyword"
+        placeholder="Search tasks…"
+        value="{{ keyword }}"
+        class="filter-input"
+      />
+
+      <select name="category" class="filter-select">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="priority" class="filter-select">
+        <option value="">All Priorities</option>
+        {% for pri in priorities %}
+          <option value="{{ pri }}" {% if selected_priority == pri %}selected{% endif %}>{{ pri | capitalize }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="btn btn--secondary">Filter</button>
+      <a href="{{ url_for('tasks.index') }}" class="btn btn--ghost">Clear</a>
+    </form>
+
+    <!-- Task list -->
+    {% if tasks %}
+      <ul class="task-list">
+        {% for task in tasks %}
+          <li class="task-item {% if task.completed %}task-item--done{% endif %} {% if task.is_overdue %}task-item--overdue{% endif %}">
+
+            <!-- Left: Toggle + Title -->
+            <div class="task-main">
+              <form action="{{ url_for('tasks.toggle', task_id=task.id) }}" method="POST" class="inline-form">
+                <button
+                  type="submit"
+                  class="btn-check {% if task.completed %}btn-check--done{% endif %}"
+                  title="{{ 'Mark incomplete' if task.completed else 'Mark complete' }}"
+                >
+                  {{ '✓' if task.completed else '○' }}
+                </button>
+              </form>
+
+              <div class="task-info">
+                <span class="task-title">{{ task.title }}</span>
+                {% if task.description %}
+                  <p class="task-desc">{{ task.description }}</p>
+                {% endif %}
+                <div class="task-meta">
+                  <span class="badge badge--category">{{ task.category }}</span>
+                  <span class="badge {{ task.priority_badge }}">{{ task.priority | capitalize }}</span>
+                  {% if task.due_date %}
+                    <span class="task-date {% if task.is_overdue %}task-date--overdue{% endif %}">
+                      📅 {{ task.due_date }}{% if task.is_overdue %} (overdue){% endif %}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="task-actions">
+              <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn--sm btn--secondary">Edit</a>
+              <form
+                action="{{ url_for('tasks.delete', task_id=task.id) }}"
+                method="POST"
+                class="inline-form"
+                onsubmit="return confirmDelete()"
+              >
+                <button type="submit" class="btn btn--sm btn--danger">Delete</button>
+              </form>
+            </div>
+
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state card">
+        <p>🎉 No tasks here! Add one to get started.</p>
+      </div>
+    {% endif %}
+
+  </section>
+</div>
+
+{% endblock %}
